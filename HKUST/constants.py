@@ -1,0 +1,1 @@
+BASE_URL = 'https://w5.ab.ust.hk/njggt/app/home'

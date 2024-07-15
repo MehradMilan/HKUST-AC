@@ -1,2 +1,5 @@
 python-telegram-bot=21.4
 requests=2.32.3
+selenium=4.22.0
+webdriver-manager=4.0.1
+apscheduler=3.10.4

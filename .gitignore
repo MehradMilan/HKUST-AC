@@ -3,3 +3,7 @@
 /*.sqlite3
 /*.pyc
 /.vscode
+*.ini
+/__pycache__
+.DS_Store
+*/*__pycache__
