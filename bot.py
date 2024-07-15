@@ -38,6 +38,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
+    print('DB Initialized')
 
 def get_config():
     config = configparser.ConfigParser()

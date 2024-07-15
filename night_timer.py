@@ -14,6 +14,9 @@ from bot import get_user_credentials
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, time
+# Multiple threads are required to run the bot in the background
+from threading import Thread
+import time
 
 scheduler = BackgroundScheduler()
 
@@ -25,47 +28,41 @@ def get_user_schedule(user_id: int) -> Tuple[bool, str, str, int, int]:
     conn.close()
     return result
 
-def turn_ac_on_scheduled(user_id):
+def toggle_ac_scheduled(user_id, end_time, on_time, off_time):
+    print('Toggling AC for user {}'.format(user_id))
     username, password = get_user_credentials(user_id)
     if username is None or password is None:
         return
-    with HKUST() as bot:
-        bot.land_login_page()
-        bot.submit_username(username)
-        bot.submit_password(password)
-        bot.toggle_ac_on()
-
-def turn_ac_off_scheduled(user_id):
-    username, password = get_user_credentials(user_id)
-    if username is None or password is None:
-        return
-    with HKUST() as bot:
-        bot.land_login_page()
-        bot.submit_username(username)
-        bot.submit_password(password)
-        bot.toggle_ac_off()
+    
+    end_time = datetime.strptime(end_time, '%H:%M')
+    end_time = datetime.combine(datetime.now().date(), end_time.time())
+    while datetime.now() < end_time:
+        with HKUST() as bot:
+            bot.land_login_page()
+            bot.submit_username(username)
+            bot.submit_password(password)
+            bot.toggle_ac_on()
+        time.sleep(on_time * 60)
+        with HKUST() as bot:
+            bot.land_login_page()
+            bot.submit_username(username)
+            bot.submit_password(password)
+            bot.toggle_ac_off()
+        time.sleep(off_time * 60)
 
 def add_user_job(user_id: int):
     night_timer_enabled, start_time, end_time, on_time, off_time = get_user_schedule(user_id)
-    if night_timer_enabled:
-        scheduler.add_job(
-            turn_ac_on_scheduled,
-            'cron',
-            minute='*/{}'.format(on_time + off_time),
-            hour='{}-{}'.format(start_time, end_time),
-            id='turn_ac_on_{}'.format(user_id),
-        )
-        scheduler.add_job(
-            turn_ac_off_scheduled,
-            'cron',
-            minute='*/{}'.format(on_time + off_time),
-            hour='{}-{}'.format(start_time + on_time, end_time),
-            id='turn_ac_off_{}'.format(user_id),
-        )
+    scheduler.add_job(
+        toggle_ac_scheduled(user_id, end_time, on_time, off_time),
+        'cron',
+        hour=start_time.split(':')[0],
+        minute=start_time.split(':')[1],
+        id='ac_{}'.format(user_id)
+    )
+    
 
 def remove_user_job(user_id: int):
-    scheduler.remove_job('turn_ac_on_{}'.format(user_id))
-    scheduler.remove_job('turn_ac_off_{}'.format(user_id))
+    scheduler.remove_job('ac_{}'.format(user_id))
 
 def update_user_job(user_id: int):
     try:
