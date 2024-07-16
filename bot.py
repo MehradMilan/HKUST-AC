@@ -53,6 +53,11 @@ async def post_init(application: Application):
     ])
 
 async def start(update: Update, context: CallbackContext) -> int:
+    user_id = update.message.from_user.id
+    res = get_user_credentials(user_id)
+    if res is not None:
+        await update.message.reply_text("You have already set your username and password.")
+        return ConversationHandler.END
     await update.message.reply_text("Welcome! Please provide your username :D")
     return USERNAME
 
@@ -88,11 +93,10 @@ def get_user_credentials(user_id: int) -> Tuple[str, str]:
 async def turn_ac_on(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
     res = get_user_credentials(user_id)
-    print(res)
-    username, password = res
-    if username is None or password is None:
+    if res is None:
         await update.message.reply_text("Please set your username and password first.")
         return
+    username, password = res
     try:
         await update.message.reply_text('Turning AC on...')
         with HKUST(teardown=True) as bot:
@@ -107,10 +111,11 @@ async def turn_ac_on(update: Update, context: CallbackContext):
 
 async def turn_ac_off(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
-    username, password = get_user_credentials(user_id)
-    if username is None or password is None:
+    res = get_user_credentials(user_id)
+    if res is None:
         await update.message.reply_text("Please set your username and password first.")
         return
+    username, password = res
     
     try:
         await update.message.reply_text('Turning AC off...')

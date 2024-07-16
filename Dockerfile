@@ -8,25 +8,18 @@ ENV TZ=Asia/Hong_Kong
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg2 \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+ENV CHROMEDRIVER_VERSION=126.0.6478.126
 
-RUN wget -q -O - <a href="https://dl-ssl.google.com/linux/linux_signing_key.pub" class="underline" target="_blank">Click this URL</a> | apt-key add - \
-    && echo "deb [arch=amd64] <a href="http://dl.google.com/linux/chrome/deb/" class="underline" target="_blank">Click this URL</a> stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update && apt-get install -y google-chrome-stable \
-    && rm /etc/apt/sources.list.d/google-chrome.list \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y wget && apt-get install -y zip
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
 
-RUN CHROME_VERSION=$(google-chrome --version | cut -f 3 -d ' ' | cut -d '.' -f 1) \
-    && CHROMEDRIVER_VERSION=$(wget -qO- "<a href="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION"" class="underline" target="_blank">Click this URL</a> \
-    && wget -q --continue -P /chromedriver "<a href="http://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"" class="underline" target="_blank">Click this URL</a> \
-    && unzip /chromedriver/chromedriver* -d /usr/local/bin/ \
-    && rm /chromedriver/chromedriver_linux64.zip
+RUN wget https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip \
+  && unzip chromedriver-linux64.zip && rm -dfr chromedriver_linux64.zip \
+  && mv chromedriver-linux64/chromedriver /usr/bin/chromedriver \
+  && chmod +x /usr/bin/chromedriver
 
-ENV PATH $PATH:/usr/local/bin/chromedriver
+ENV PATH $PATH:/usr/bin/chromedriver
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
