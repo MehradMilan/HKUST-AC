@@ -8,7 +8,7 @@ from selenium.common.exceptions import StaleElementReferenceException
 class HKUST(webdriver.Chrome):
 
     def __init__(self,
-                 teardown: bool = False,):
+                 teardown: bool = True,):
         self.teardown = teardown
         super(HKUST, self).__init__()
         self.implicitly_wait(15)
@@ -18,7 +18,8 @@ class HKUST(webdriver.Chrome):
             self.quit()
         
     def land_login_page(self):
-        self.get(consts.BASE_URL)        
+        self.switch_to.new_window('window')
+        self.get(consts.BASE_URL)   
 
     def submit_username(self, username):
         WebDriverWait(self, 15).until(EC.presence_of_element_located((By.ID, 'i0116')))

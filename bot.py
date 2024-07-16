@@ -2,7 +2,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
-    CallbackQueryHandler,
     ConversationHandler,
     MessageHandler,
     filters,
@@ -10,17 +9,14 @@ from telegram.ext import (
 )
 
 import sqlite3
-import requests
 import configparser
 from HKUST.hkust import HKUST
-import time
+from night_timer import add_user_job, remove_user_job, update_user_job, start_scheduler
+from datetime import datetime
+from typing import Tuple
 
-from night_timer import *
-
-# Define states for conversation
 USERNAME, PASSWORD, TURN_ON_OFF, TIMER_START_END_TIME, ON_OFF_TIME = range(5)
 
-# Initialize database
 def init_db():
     conn = sqlite3.connect('user_credentials.db')
     c = conn.cursor()
@@ -53,7 +49,7 @@ async def post_init(application: Application):
         ('enable_night_timer', 'Enable night timer (Default: Disabled)'),
         ('disable_night_timer', 'Disable night timer (Default: Disabled)'),
         ('set_timer_start_end_time', 'Set night timer start and end time (Default: 22:00 - 07:00)'),
-        ('set_on_off_time', 'Set on and off time (Default: 15 - 5, total should be 20 minutes)'),
+        ('set_on_off_time', 'Set on and off time (Default: 15 - 5, total should be less than 1 hour)'),
     ])
 
 async def start(update: Update, context: CallbackContext) -> int:
@@ -97,14 +93,17 @@ async def turn_ac_on(update: Update, context: CallbackContext):
     if username is None or password is None:
         await update.message.reply_text("Please set your username and password first.")
         return
-    
-    with HKUST() as bot:
-        bot.land_login_page()
-        bot.submit_username(username)
-        bot.submit_password(password)
-        bot.toggle_ac_on()
-    
-    await update.message.reply_text("Air conditioner has been turned on.")
+    try:
+        await update.message.reply_text('Turning AC on...')
+        with HKUST(teardown=True) as bot:
+            bot.land_login_page()
+            bot.submit_username(username)
+            bot.submit_password(password)
+            bot.toggle_ac_on()
+        await update.message.reply_text("AC has been turned on.")
+    except:
+        await update.message.reply_text('Some error happened. Try again')
+    return ConversationHandler.END
 
 async def turn_ac_off(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -113,13 +112,17 @@ async def turn_ac_off(update: Update, context: CallbackContext):
         await update.message.reply_text("Please set your username and password first.")
         return
     
-    with HKUST() as bot:
-        bot.land_login_page()
-        bot.submit_username(username)
-        bot.submit_password(password)
-        bot.toggle_ac_off()
-    
-    await update.message.reply_text("Air conditioner has been turned off.")
+    try:
+        await update.message.reply_text('Turning AC off...')
+        with HKUST(teardown=True) as bot:
+            bot.land_login_page()
+            bot.submit_username(username)
+            bot.submit_password(password)
+            bot.toggle_ac_off() 
+        await update.message.reply_text('AC has been turned off.')
+    except:
+        await update.message.reply_text('Some error happened. Try again')
+    return ConversationHandler.END
 
 async def enable_night_timer(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -129,17 +132,19 @@ async def enable_night_timer(update: Update, context: CallbackContext):
     result = c.fetchone()
     if result is None:
         await update.message.reply_text("Please set your username and password first.")
+        conn.close()
         return
     elif result[0] == 1:
         await update.message.reply_text("Night timer is already enabled.")
+        conn.close()
         return
     else:
         c.execute('UPDATE credentials SET night_timer_enabled = 1 WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
         await update.message.reply_text("Night timer has been enabled.")
         add_user_job(user_id)
-
-    conn.commit()
-    conn.close()
+    return ConversationHandler.END
 
 async def disable_night_timer(update: Update, context: CallbackContext):
     user_id = update.effective_user.id
@@ -149,24 +154,26 @@ async def disable_night_timer(update: Update, context: CallbackContext):
     result = c.fetchone()
     if result is None:
         await update.message.reply_text("Please set your username and password first.")
+        conn.close()
         return
     elif result[0] == 0:
         await update.message.reply_text("Night timer is already disabled.")
+        conn.close()
         return
     else:
         c.execute('UPDATE credentials SET night_timer_enabled = 0 WHERE user_id = ?', (user_id,))
+        conn.commit()
+        conn.close()
         await update.message.reply_text("Night timer has been disabled.")
         remove_user_job(user_id)
-
-    conn.commit()
-    conn.close()
+    return ConversationHandler.END
 
 async def message_timer_start_end_time(update: Update, context: CallbackContext):
     await update.message.reply_text("Please provide the start and end time for the night timer in the format %H:%M - %H:%M")
     return TIMER_START_END_TIME
 
 async def set_timer_start_end_time(update: Update, context: CallbackContext):
-    times = update.message.text.split('-')
+    times = update.message.text.strip().split('-')
     if len(times) != 2:
         await update.message.reply_text("Invalid time format. Please provide time in the format %H:%M - %H:%M")
         return
@@ -184,38 +191,40 @@ async def set_timer_start_end_time(update: Update, context: CallbackContext):
     c.execute('UPDATE credentials SET start_time = ?, end_time = ? WHERE user_id = ?', (start_time, end_time, user_id))
     if c.rowcount == 0:
         await update.message.reply_text("Please set your username and password first.")
+        conn.close()
         return
     else:
         await update.message.reply_text("Start and end time has been set successfully.")
 
-    update_user_job(user_id)
-
     conn.commit()
     conn.close()
 
+    update_user_job(user_id)
+    return ConversationHandler.END
+
 async def message_on_off_time(update: Update, context: CallbackContext):
-    await update.message.reply_text("Please provide the on and off time for the night timer in the format S - E")
+    await update.message.reply_text("Please provide the on and off time for the night timer in the format O - F")
     return ON_OFF_TIME
 
 async def set_on_off_time(update: Update, context: CallbackContext):
     times = update.message.text.split(' - ')
     if len(times) != 2:
-        await update.message.reply_text("Invalid time format. Please provide time in the format S - E")
+        await update.message.reply_text("Invalid time format. Please provide time in the format O - F")
         return
     on_time, off_time = times
     try:
         on_time = int(on_time)
         off_time = int(off_time)
     except ValueError:
-        await update.message.reply_text("Invalid time format. Please provide time in the format S - E")
+        await update.message.reply_text("Invalid time format. Please provide time in the format O - F")
         return
     
     if on_time < 0 or off_time < 0:
         await update.message.reply_text("Time cannot be negative.")
         return
     
-    if on_time + off_time > 20:
-        await update.message.reply_text("Total time should be equal to 20 minutes.")
+    if on_time + off_time > 60:
+        await update.message.reply_text("Total time should be less than 1 hour.")
         return
     
     user_id = update.effective_user.id
@@ -224,14 +233,16 @@ async def set_on_off_time(update: Update, context: CallbackContext):
     c.execute('UPDATE credentials SET on_time = ?, off_time = ? WHERE user_id = ?', (on_time, off_time, user_id))
     if c.rowcount == 0:
         await update.message.reply_text("Please set your username and password first.")
+        conn.close()
         return
     else:
         await update.message.reply_text("On and off time has been set successfully.")
 
-    update_user_job(user_id)
-
     conn.commit()
     conn.close()
+
+    update_user_job(user_id)
+    return ConversationHandler.END
 
 def main():
     config = get_config()
@@ -271,6 +282,10 @@ def main():
     )
     application.add_handler(on_off_handler)
 
+    start_scheduler()
+    print('Scheduler started')
+
+    print('Bot Starting...')
     application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
