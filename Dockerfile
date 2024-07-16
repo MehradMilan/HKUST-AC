@@ -1,40 +1,34 @@
-# Use official Python image
-FROM python:3.9-slim
+FROM python:3.8.10
 
-# Set working directory
 WORKDIR /usr/src/app
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    TZ=Asia/Hong_Kong \
-    CHROMEDRIVER_VERSION=126.0.6478.126
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV TZ=Asia/Hong_Kong
 
-# Set timezone
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-# Install Chrome
-RUN apt-get update && apt-get install -y wget gnupg2 unzip \
-    && wget -q <a href="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" class="underline" target="_blank">Click this URL</a> \
-    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
-    && rm ./google-chrome-stable_current_amd64.deb
+ENV CHROMEDRIVER_VERSION=114.0.5735.90
 
-# Install ChromeDriver
-RUN wget -q "<a href="https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"" class="underline" target="_blank">Click this URL</a> \
-    && unzip chromedriver_linux64.zip \
-    && rm chromedriver_linux64.zip \
-    && mv chromedriver /usr/local/bin/chromedriver \
-    && chmod 755 /usr/local/bin/chromedriver
+RUN apt-get update && apt-get install -y wget && apt-get install -y zip
+RUN wget -q https://www.slimjet.com/chrome/download-chrome.php?file=files%2F104.0.5112.102%2Fgoogle-chrome-stable_current_amd64.deb
+RUN dpkg -i download-chrome.php?file=files%2F104.0.5112.102%2Fgoogle-chrome-stable_current_amd64.deb || apt-get -f install -y
+RUN rm -f download-chrome.php?file=files%2F104.0.5112.102%2Fgoogle-chrome-stable_current_amd64.deb
 
-# Add ChromeDriver to PATH
-ENV PATH $PATH:/usr/local/bin/chromedriver
+RUN wget https://chromedriver.storage.googleapis.com/104.0.5112.79/chromedriver_linux64.zip \
+  && unzip chromedriver_linux64.zip && rm -dfr chromedriver_linux64.zip \
+  && mv chromedriver /usr/bin/chromedriver \
+  && rm -rf LICENSE.chromedriver \
+  && chmod 777 /usr/bin/chromedriver
 
-# Install Python dependencies
+RUN echo "Chrome: " && google-chrome --version
+
+ENV PATH $PATH:/usr/bin/chromedriver
+ENV DISPLAY=localhost:11.1
+
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
 COPY . .
 
-# Run the bot
 CMD ["python", "./bot.py"]
