@@ -12,9 +12,10 @@ class HKUST(webdriver.Chrome):
                  teardown: bool = True,):
         self.teardown = teardown
         options = webdriver.ChromeOptions()
-        options.add_argument("disable-gpu")
-        options.add_argument('headless')
+        options.add_argument("--disable-gpu")
+        options.add_argument('--headless')
         options.add_argument(f"crash-dumps-dir={os.path.expanduser('~/tmp/Crashpad')}")
+        options.add_argument('--remote-debugging-pipe')
         super(HKUST, self).__init__(options=options)
         self.implicitly_wait(15)
 
