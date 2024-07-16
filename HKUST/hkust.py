@@ -5,7 +5,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import StaleElementReferenceException
 
-class SITE(webdriver.Chrome):
+class HKUST(webdriver.Chrome):
 
     def __init__(self, teardown: bool = True):
         self.teardown = teardown
@@ -15,7 +15,7 @@ class SITE(webdriver.Chrome):
         options.add_argument("--disable-extensions")
         options.add_argument("--no-sandbox")
         options.add_argument("--headless")
-        super(SITE, self).__init__(options=options)
+        super(HKUST, self).__init__(options=options)
         self.implicitly_wait(15)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
