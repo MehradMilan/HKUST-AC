@@ -15,7 +15,7 @@ class HKUST(webdriver.Chrome):
         options.add_argument("disable-gpu")
         options.add_argument('headless')
         options.add_argument(f"crash-dumps-dir={os.path.expanduser('~/tmp/Crashpad')}")
-        super(HKUST, self).__init__()
+        super(HKUST, self).__init__(options=options)
         self.implicitly_wait(15)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
