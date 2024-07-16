@@ -20,6 +20,7 @@ RUN wget https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_
   && chmod +x /usr/bin/chromedriver
 
 ENV PATH $PATH:/usr/bin/chromedriver
+ENV DISPLAY=localhost:11.1
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

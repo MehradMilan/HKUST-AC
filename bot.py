@@ -105,7 +105,8 @@ async def turn_ac_on(update: Update, context: CallbackContext):
             bot.submit_password(password)
             bot.toggle_ac_on()
         await update.message.reply_text("AC has been turned on.")
-    except:
+    except Exception as e:
+        print(e)
         await update.message.reply_text('Some error happened. Try again')
     return ConversationHandler.END
 
