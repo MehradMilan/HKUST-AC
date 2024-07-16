@@ -1,30 +1,40 @@
+# Use official Python image
 FROM python:3.9-slim
 
+# Set working directory
 WORKDIR /usr/src/app
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-ENV TZ=Asia/Hong_Kong
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    TZ=Asia/Hong_Kong \
+    CHROMEDRIVER_VERSION=126.0.6478.126
 
+# Set timezone
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-ENV CHROMEDRIVER_VERSION=126.0.6478.126
+# Install Chrome
+RUN apt-get update && apt-get install -y wget gnupg2 unzip \
+    && wget -q <a href="https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb" class="underline" target="_blank">Click this URL</a> \
+    && apt-get install -y ./google-chrome-stable_current_amd64.deb \
+    && rm ./google-chrome-stable_current_amd64.deb
 
-RUN apt-get update && apt-get install -y wget && apt-get install -y zip
-RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-RUN apt-get install -y ./google-chrome-stable_current_amd64.deb
+# Install ChromeDriver
+RUN wget -q "<a href="https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip"" class="underline" target="_blank">Click this URL</a> \
+    && unzip chromedriver_linux64.zip \
+    && rm chromedriver_linux64.zip \
+    && mv chromedriver /usr/local/bin/chromedriver \
+    && chmod 755 /usr/local/bin/chromedriver
 
-RUN wget https://storage.googleapis.com/chrome-for-testing-public/$CHROMEDRIVER_VERSION/linux64/chromedriver-linux64.zip \
-  && unzip chromedriver-linux64.zip && rm -dfr chromedriver_linux64.zip \
-  && mv chromedriver-linux64/chromedriver /usr/bin/chromedriver \
-  && chmod +x /usr/bin/chromedriver
+# Add ChromeDriver to PATH
+ENV PATH $PATH:/usr/local/bin/chromedriver
 
-ENV PATH $PATH:/usr/bin/chromedriver
-ENV DISPLAY=localhost:11.1
-
+# Install Python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application
 COPY . .
 
+# Run the bot
 CMD ["python", "./bot.py"]

@@ -8,8 +8,7 @@ import os
 
 class HKUST(webdriver.Chrome):
 
-    def __init__(self,
-                 teardown: bool = True,):
+    def __init__(self, teardown: bool = True):
         self.teardown = teardown
         options = webdriver.ChromeOptions()
         options.add_argument("--disable-gpu")
