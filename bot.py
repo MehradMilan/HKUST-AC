@@ -1,4 +1,4 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -50,6 +50,7 @@ async def post_init(application: Application):
         ('disable_night_timer', 'Disable night timer (Default: Disabled)'),
         ('set_timer_start_end_time', 'Set night timer start and end time (Default: 22:00 - 07:00)'),
         ('set_on_off_time', 'Set on and off time (Default: 15 - 5, total should be less than 1 hour)'),
+        ('reset', 'Reset your username and password')
     ])
 
 async def start(update: Update, context: CallbackContext) -> int:
@@ -60,6 +61,17 @@ async def start(update: Update, context: CallbackContext) -> int:
         return ConversationHandler.END
     await update.message.reply_text("Welcome! Please provide your username :D")
     return USERNAME
+
+async def reset(update: Update, context: CallbackContext) -> int:
+    user_id = update.message.from_user.id
+    conn = sqlite3.connect('user_credentials.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM credentials WHERE user_id = ?', (user_id,))
+    conn.commit()
+    conn.close()
+    await update.message.reply_text("Your credentials have been reset successfully.")
+    return ConversationHandler.END
+
 
 async def input_username(update: Update, context: CallbackContext) -> int:
     user_id = update.message.from_user.id
@@ -106,7 +118,7 @@ async def turn_ac_on(update: Update, context: CallbackContext):
             bot.toggle_ac_on()
         await update.message.reply_text("AC has been turned on.")
     except Exception as e:
-        print(e)
+        print('Error: {}\n{}'.format(username, e))
         await update.message.reply_text('Some error happened. Try again')
     return ConversationHandler.END
 

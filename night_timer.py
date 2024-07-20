@@ -7,7 +7,7 @@ from apscheduler.triggers.cron import CronTrigger
 from HKUST.hkust import HKUST
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import time
 
 scheduler = BackgroundScheduler()
@@ -30,7 +30,6 @@ def get_user_credentials(user_id: int) -> Tuple[str, str]:
     return result
 
 def toggle_ac_scheduled(user_id, end_time, on_time, off_time):
-    print('Toggling AC for user {}'.format(user_id))
     username, password = get_user_credentials(user_id)
     if username is None or password is None:
         return
@@ -58,28 +57,37 @@ def add_user_job(user_id: int):
     night_timer_enabled, start_time, end_time, on_time, off_time = get_user_schedule(user_id)
     if not night_timer_enabled:
         return
+
+    now = datetime.now()
     hour, minute = start_time.strip().split(':')
+    start_datetime = now.replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
+
+    if now > start_datetime:
+        remaining_end_time = datetime.strptime(end_time.strip(), '%H:%M')
+        remaining_end_time = datetime.combine(now.date(), remaining_end_time.time())
+        if now < remaining_end_time:
+            toggle_ac_scheduled(user_id, end_time.strip(), on_time, off_time)
+
+        start_datetime += timedelta(days=1)
+
     scheduler.add_job(
         toggle_ac_scheduled,
         'cron',
-        hour=hour,
-        minute=minute,
+        hour=start_datetime.hour,
+        minute=start_datetime.minute,
         id='ac_{}'.format(user_id),
         args=[user_id, end_time.strip(), on_time, off_time]
     )
-    print('Jobs: {}'.format(scheduler.get_jobs()))
 
 def remove_user_job(user_id: int):
     try:
         scheduler.remove_job('ac_{}'.format(user_id))
-        print('Jobs: {}'.format(scheduler.get_jobs()))
     except:
         pass
 
 def update_user_job(user_id: int):
     remove_user_job(user_id)
     add_user_job(user_id)
-    print('Jobs: {}'.format(scheduler.get_jobs()))
 
 def start_scheduler():
     scheduler.start()

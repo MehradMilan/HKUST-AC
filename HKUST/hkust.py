@@ -24,7 +24,6 @@ class HKUST(webdriver.Chrome):
         
     def land_login_page(self):
         self.get(consts.BASE_URL)
-        print('Landed on login page.')
 
     def submit_username(self, username):
         WebDriverWait(self, 15).until(EC.presence_of_element_located((By.ID, 'i0116')))
@@ -32,7 +31,6 @@ class HKUST(webdriver.Chrome):
         username_input.send_keys(username)
         username_button = self.find_element(By.ID, 'idSIButton9')
         username_button.click()
-        print('Submitted username.')
 
     def submit_password(self, password):
         self.implicitly_wait(5)
@@ -41,10 +39,8 @@ class HKUST(webdriver.Chrome):
         password_input.send_keys(password)
         WebDriverWait(self, 15).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[data-report-event="Signin_Submit"]')))
         password_button = self.find_element(By.CSS_SELECTOR, 'input[data-report-event="Signin_Submit"]')
-        print('Submitting password.')
         try:
             password_button.click()
-            print('Password submitted.')
         except StaleElementReferenceException:
             WebDriverWait(self, 15).until(EC.element_to_be_clickable((By.CSS_SELECTOR, 'input[data-report-event="Signin_Submit"]')))
             self.find_element(By.CSS_SELECTOR, 'input[data-report-event="Signin_Submit"]').click()
@@ -56,9 +52,6 @@ class HKUST(webdriver.Chrome):
             ac_button.click()
             WebDriverWait(self, 15).until(EC.alert_is_present())
             self._switch_to.alert.accept()
-            print('AC is now on.')
-        else:
-            print('AC is already on.')
 
     def toggle_ac_off(self):
         WebDriverWait(self, 15).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'button[role=switch]')))
@@ -67,5 +60,3 @@ class HKUST(webdriver.Chrome):
             ac_button.click()
             WebDriverWait(self, 15).until(EC.alert_is_present())
             self._switch_to.alert.accept()
-        else:
-            print('AC is already off.')
