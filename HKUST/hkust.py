@@ -31,6 +31,11 @@ class HKUST(webdriver.Chrome):
         username_input.send_keys(username)
         username_button = self.find_element(By.ID, 'idSIButton9')
         username_button.click()
+        try:
+            WebDriverWait(self, 2).until(EC.presence_of_element_located((By.ID, 'usernameError')))
+            return False
+        except:
+            return True
 
     def submit_password(self, password):
         self.implicitly_wait(5)

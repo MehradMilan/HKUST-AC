@@ -76,6 +76,18 @@ async def reset(update: Update, context: CallbackContext) -> int:
 async def input_username(update: Update, context: CallbackContext) -> int:
     user_id = update.message.from_user.id
     context.user_data['username'] = update.message.text
+    if not str(context.user_data['username']).endswith('@connect.ust.hk'):
+        await update.message.reply_text("Please provide a valid HKUST email address.")
+        return
+    try:
+        with HKUST(teardown=True) as bot:
+            bot.land_login_page()
+            if not bot.submit_username(context.user_data['username']):
+                await update.message.reply_text("Invalid username. Please provide a valid HKUST email address.")
+                return
+    except:
+        await update.message.reply_text("Invalid username. Please provide a valid HKUST email address.")
+        return
     await update.message.reply_text("Username received! Now please provide your password.")
     return PASSWORD
 
@@ -83,6 +95,14 @@ async def input_password(update: Update, context: CallbackContext) -> int:
     user_id = update.message.from_user.id
     username = context.user_data.get('username')
     password = update.message.text
+    try:
+        with HKUST(teardown=True) as bot:
+            bot.land_login_page()
+            bot.submit_username(username)
+            bot.submit_password(password)
+    except:
+        await update.message.reply_text("Invalid password. Please provide the correct password.")
+        return
     
     conn = sqlite3.connect('user_credentials.db')
     c = conn.cursor()
