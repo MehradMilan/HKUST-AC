@@ -50,6 +50,7 @@ async def post_init(application: Application):
         ('disable_night_timer', 'Disable night timer (Default: Disabled)'),
         ('set_timer_start_end_time', 'Set night timer start and end time (Default: 22:00 - 07:00)'),
         ('set_on_off_time', 'Set on and off time (Default: 15 - 5, total should be less than 1 hour)'),
+        ('get_scheduler_status', 'Get night timer status'),
         ('reset', 'Reset your username and password')
     ])
 
@@ -282,6 +283,28 @@ async def set_on_off_time(update: Update, context: CallbackContext):
     update_user_job(user_id)
     return ConversationHandler.END
 
+async def get_scheduler_status(update: Update, context: CallbackContext):
+    user_id = update.effective_user.id
+    conn = sqlite3.connect('user_credentials.db')
+    c = conn.cursor()
+    c.execute('SELECT night_timer_enabled FROM credentials WHERE user_id = ?', (user_id,))
+    result = c.fetchone()
+    if result is None:
+        await update.message.reply_text("Please set your username and password first.")
+        conn.close()
+        return
+    elif result[0] == 0:
+        await update.message.reply_text("Night timer is disabled.")
+        conn.close()
+        return
+    else:
+        c.execute('SELECT start_time, end_time, on_time, off_time FROM credentials WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        conn.close()
+        start_time, end_time, on_time, off_time = result
+        await update.message.reply_text("Night timer is enabled with the following settings:\nStart Time: {}\nEnd Time: {}\nOn Time: {}\nOff Time: {}".format(start_time, end_time, on_time, off_time))
+        return ConversationHandler.END
+
 def main():
     config = get_config()
     token = config['telegram.bot']['TOKEN']
@@ -301,6 +324,7 @@ def main():
     application.add_handler(CommandHandler('turn_off', turn_ac_off))
     application.add_handler(CommandHandler('enable_night_timer', enable_night_timer))
     application.add_handler(CommandHandler('disable_night_timer', disable_night_timer))
+    application.add_handler(CommandHandler('get_scheduler_status', get_scheduler_status))
     application.add_handler(CommandHandler('reset', reset))
 
     timer_handler = ConversationHandler(
