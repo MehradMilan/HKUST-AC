@@ -29,7 +29,8 @@ def get_user_credentials(user_id: int) -> Tuple[str, str]:
     conn.close()
     return result
 
-def toggle_ac_scheduled(user_id, end_time, on_time, off_time):
+def toggle_ac_scheduled(user_id, end_time, on_time, off_time, is_temp=False):
+    print('Toggling AC')
     username, password = get_user_credentials(user_id)
     if username is None or password is None:
         return
@@ -52,8 +53,12 @@ def toggle_ac_scheduled(user_id, end_time, on_time, off_time):
             time.sleep(off_time * 60)
         except:
             pass
+    if is_temp:
+        remove_user_job(user_id)
+        add_user_job(user_id)
 
 def add_user_job(user_id: int):
+    print('Adding job')
     night_timer_enabled, start_time, end_time, on_time, off_time = get_user_schedule(user_id)
     if not night_timer_enabled:
         return
@@ -63,21 +68,29 @@ def add_user_job(user_id: int):
     start_datetime = now.replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
 
     if now > start_datetime:
+        print('Start time is in the past')
         remaining_end_time = datetime.strptime(end_time.strip(), '%H:%M')
         remaining_end_time = datetime.combine(now.date(), remaining_end_time.time())
         if now < remaining_end_time:
-            toggle_ac_scheduled(user_id, end_time.strip(), on_time, off_time)
-
-        start_datetime += timedelta(days=1)
-
-    scheduler.add_job(
-        toggle_ac_scheduled,
-        'cron',
-        hour=start_datetime.hour,
-        minute=start_datetime.minute,
-        id='ac_{}'.format(user_id),
-        args=[user_id, end_time.strip(), on_time, off_time]
-    )
+            scheduler.add_job(
+                toggle_ac_scheduled,
+                'cron',
+                hour=now.hour,
+                minute=now.minute + 1,
+                id='ac_{}'.format(user_id),
+                args=[user_id, end_time.strip(), on_time, off_time, True]
+            )
+        else:
+            return
+    else:
+        scheduler.add_job(
+            toggle_ac_scheduled,
+            'cron',
+            hour=int(hour),
+            minute=int(minute),
+            id='ac_{}'.format(user_id),
+            args=[user_id, end_time.strip(), on_time, off_time, False]
+        )
 
 def remove_user_job(user_id: int):
     try:
