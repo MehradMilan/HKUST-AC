@@ -301,6 +301,7 @@ def main():
     application.add_handler(CommandHandler('turn_off', turn_ac_off))
     application.add_handler(CommandHandler('enable_night_timer', enable_night_timer))
     application.add_handler(CommandHandler('disable_night_timer', disable_night_timer))
+    application.add_handler(CommandHandler('reset', reset))
 
     timer_handler = ConversationHandler(
         entry_points=[CommandHandler('set_timer_start_end_time', message_timer_start_end_time)],
